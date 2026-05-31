@@ -1,0 +1,11 @@
+Django>=3.1.4
+djangorestframework==3.14.0
+django-filter
+django-extensions
+twilio
+whitenoise
+PyQt5
+opencv-python-headless
+numpy
+requests
+ultralytics
