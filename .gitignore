@@ -1,0 +1,20 @@
+# Environment variables (Cực kỳ quan trọng để bảo mật)
+.env
+fire_detection/web_app/.env
+
+# Virtual Environment (Thư mục ảo chứa thư viện cài thêm)
+.venv/
+venv/
+ENV/
+
+# Python Cache (Bộ nhớ đệm Python)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database (Cơ sở dữ liệu SQLite)
+db.sqlite3
+
+# Hệ điều hành
+.DS_Store
+Thumbs.db
