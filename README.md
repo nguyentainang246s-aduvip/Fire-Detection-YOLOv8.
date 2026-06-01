@@ -15,9 +15,11 @@ Hệ thống tích hợp Trí tuệ Nhân tạo (AI) giúp phát hiện lửa v�
 *   **Máy chủ Quản trị & Điều hướng Cảnh báo (Django REST Framework):**
     *   *Quản lý tài khoản:* Đăng ký, đăng nhập và xác thực bằng cơ chế Token bảo mật.
     *   *Xử lý tác vụ ngầm (Multi-threading):* Tự động tách luồng xử lý gửi Email và SMS riêng biệt (background threads), giúp API trả kết quả về ứng dụng PyQt5 ngay tức thì mà không bị nghẽn mạng.
-    *   *Định dạng người nhận linh hoạt:* Tự động quét Regex để nhận diện thông tin người dùng nhập vào là **Email** hay **Số điện thoại** để gửi hình thức cảnh báo tương ứng:
+    *   *Định dạng người nhận linh hoạt:* Tự động quét Regex/Tiền tố để nhận diện thông tin người dùng nhập vào là **Email**, **Số điện thoại** hay **Telegram Chat ID** để gửi hình thức cảnh báo tương ứng:
         *   **Email (Gmail SMTP):** Gửi thư cảnh báo khẩn cấp **đính kèm trực tiếp ảnh chụp** đám cháy được cắt từ Camera.
         *   **SMS (Twilio API):** Gửi tin nhắn SMS khẩn cấp tới số điện thoại di động đăng ký.
+        *   **Telegram Bot API:** Gửi tin nhắn cảnh báo khẩn cấp kèm hình ảnh thực tế trực tiếp qua Telegram tới Chat ID cá nhân hoặc Chat ID nhóm (Group Chat).
+    *   *Hệ thống gửi cảnh báo song song (Parallel Alerts):* Nếu cấu hình Telegram Bot hợp lệ trên máy chủ Django, hệ thống sẽ tự động gửi thêm tin nhắn Telegram bổ sung song song bất kể người dùng chọn Email hay SMS trên ứng dụng PyQt5, đảm bảo không bỏ lỡ cảnh báo.
     *   *Trang Dashboard lịch sử:* Giao diện web Django lưu trữ toàn bộ ảnh chụp sự cố, thời gian xảy ra, vị trí cụ thể và cho phép tra cứu, quản lý lịch sử hỏa hoạn thông minh.
 
 ---
@@ -53,6 +55,8 @@ sequenceDiagram
             NT->>R: Gửi Email cảnh báo kèm ảnh đính kèm (Gmail SMTP)
         else Nếu là Số điện thoại
             NT->>R: Gửi tin nhắn SMS cảnh báo (Twilio API)
+        else Nếu là Telegram Chat ID
+            NT->>R: Gửi tin nhắn & ảnh cảnh báo khẩn cấp (Telegram Bot API)
         end
     end
 ```
@@ -142,6 +146,12 @@ Mở file cấu hình Django tại `fire_detection/web_app/wd_ss/settings.py` v�
    TWILIO_NUMBER = '+1xxxxxxxxxx'                     # Số điện thoại ảo được cấp từ Twilio
    ```
 
+3. **Cấu hình Telegram Bot:**
+   ```python
+   TELEGRAM_BOT_TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'     # Token sinh ra từ @BotFather trên Telegram
+   TELEGRAM_CHAT_ID = 'YOUR_TELEGRAM_CHAT_ID'         # Chat ID mặc định nhận cảnh báo (cá nhân hoặc nhóm)
+   ```
+
 #### Bước B: Khởi tạo Cơ sở Dữ liệu & Tạo tài khoản Admin
 Chạy các lệnh di chuyển dữ liệu (Migrations) để khởi tạo cấu trúc bảng biểu trong SQLite:
 
@@ -193,6 +203,7 @@ python main.py
     *   **Send to:** Nhập thông tin người nhận cảnh báo khẩn cấp:
         *   Nhập địa chỉ **Email** (Ví dụ: `quanly@gmail.com`) để nhận email kèm ảnh chụp thực tế đám cháy.
         *   Nhập **Số điện thoại** có mã quốc gia (Ví dụ: `+84912345678`) để nhận tin nhắn SMS qua Twilio.
+        *   Nhập **Telegram Chat ID** (Ví dụ: `123456789` hoặc `telegram:123456789`) để nhận tin nhắn kèm hình ảnh chụp thực tế trực tiếp qua Telegram.
     *   Nhấn **Start Detection** để mở camera giám sát.
 3.  **Giám sát & Cảnh báo Tự động:**
     *   Cửa sổ Camera sẽ mở ra và nạp mô hình AI YOLOv8. Hệ thống tiến hành quét từng khung hình.
