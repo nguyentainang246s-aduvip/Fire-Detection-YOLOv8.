@@ -66,24 +66,86 @@ def post_alert(request):
 # ==========================================
 # 3. MÁY QUÉT SINH TRẮC HỌC (NHẬN DIỆN LIÊN HỆ)
 # ==========================================
-# Hàm này dùng Regex để soi xem thông tin nơi nhận là Email hay Số điện thoại.
+# Hàm này dùng Regex để soi xem thông tin nơi nhận là Email, Số điện thoại, hay Telegram Chat ID.
 def identify_email_sms(serializer):
+    receiver = serializer.data['alert_receiver'].strip()
+
+    # Kích hoạt Telegram tự động nếu cấu hình Telegram hợp lệ và khác mặc định
+    # Điều này giúp người dùng nhận được tin nhắn Telegram ngay cả khi họ điền Email trên giao diện PyQt5!
+    from django.conf import settings
+    token = getattr(settings, 'TELEGRAM_BOT_TOKEN', '')
+    default_chat_id = getattr(settings, 'TELEGRAM_CHAT_ID', '')
+    
+    has_valid_telegram_config = (
+        token and token != 'YOUR_TELEGRAM_BOT_TOKEN' and
+        default_chat_id and default_chat_id != 'YOUR_TELEGRAM_CHAT_ID'
+    )
 
     # A. Nếu tìm thấy định dạng chuỗi chứa ký tự '@' và đuôi tên miền hợp lệ
-    if(re.search(r'^[\w\.-]+@[\w\.-]+\.\w+$', serializer.data['alert_receiver'])):  
+    if re.search(r'^[\w\.-]+@[\w\.-]+\.\w+$', receiver):  
         print("Bảo vệ: Phát hiện đây là một EMAIL hợp lệ!")
         # Bàn giao cho Shipper chuyên gửi Email
         send_email(serializer)
         
+        # Gửi thêm tin nhắn Telegram bổ sung song song để đảm bảo không bỏ lỡ cảnh báo cháy
+        if has_valid_telegram_config:
+            print("Hệ thống: Tự động gửi thêm cảnh báo Telegram song song với Email!")
+            send_telegram(serializer, use_default_chat_id=True)
+        
     # B. Nếu khớp với định dạng bắt đầu bằng đầu số quốc gia +84 và 10 số tiếp theo
-    elif re.compile("[+84][0-9]{10}").match(serializer.data['alert_receiver']):
+    elif re.compile("[+84][0-9]{10}").match(receiver):
         print("Bảo vệ: Phát hiện đây là một SỐ ĐIỆN THOẠI hợp lệ!")
         # Bàn giao cho Shipper chuyên gửi tin nhắn SMS Twilio
         send_sms(serializer)
         
+        # Gửi thêm tin nhắn Telegram bổ sung song song
+        if has_valid_telegram_config:
+            print("Hệ thống: Tự động gửi thêm cảnh báo Telegram song song với SMS!")
+            send_telegram(serializer, use_default_chat_id=True)
+
+    # C. Nếu khớp với định dạng Telegram (bắt đầu bằng 'telegram:' hoặc chỉ chứa số nguyên, có thể âm)
+    elif receiver.startswith('telegram:') or re.match(r'^-?\d+$', receiver):
+        print("Bảo vệ: Phát hiện đây là một TELEGRAM CHAT ID hợp lệ!")
+        # Bàn giao cho Shipper chuyên gửi Telegram
+        send_telegram(serializer)
+        
     else:
         # Trường hợp khách cung cấp thông tin liên hệ không đúng chuẩn
-        print("Bảo vệ: Thông tin nơi nhận không phải Email hay SĐT hợp lệ!")
+        print("Bảo vệ: Thông tin nơi nhận không phải Email, SĐT hay Telegram Chat ID hợp lệ!")
+        if has_valid_telegram_config:
+            print("Hệ thống: Tự động gửi Telegram cứu cánh đến Chat ID mặc định!")
+            send_telegram(serializer, use_default_chat_id=True)
+
+
+# ==========================================
+# 3B. SHIPPER GỬI TELEGRAM (CHẠY NGẦM)
+# ==========================================
+# Sử dụng @start_new_thread để chạy song song ngầm dưới nền hệ thống
+@start_new_thread
+def send_telegram(serializer, use_default_chat_id=False):
+    receiver = serializer.data['alert_receiver'].strip()
+    
+    if use_default_chat_id:
+        chat_id = None  # Sẽ tự động lấy từ settings.TELEGRAM_CHAT_ID trong telegram_service
+    else:
+        # Loại bỏ tiền tố 'telegram:' nếu có để lấy chat_id nguyên bản
+        if receiver.startswith('telegram:'):
+            chat_id = receiver.split(':', 1)[1]
+        else:
+            chat_id = receiver
+
+    # Soạn thảo thư cảnh báo chi tiết kèm đường dẫn URL
+    message = prepare_alert_message(serializer)
+    telegram_message = f"⚠️ CẢNH BÁO HỎA HOẠN: {message}"
+
+    # Lấy thông tin đường dẫn ảnh vừa lưu
+    image_value = str(serializer.data.get('image', ''))
+    filename = image_value.split('/')[-1] # Tách lấy tên file ảnh (ví dụ: alert.jpg)
+    image_path = os.path.join(settings.MEDIA_ROOT, filename) # Khớp nối với đường dẫn vật lý thực tế trên đĩa cứng
+
+    from alertupload_rest.telegram_service import send_telegram_alert
+    send_telegram_alert(telegram_message, image_path=image_path, chat_id=chat_id)
+
 
 
 # ==========================================

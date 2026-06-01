@@ -12,9 +12,21 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 
 from pathlib import Path
 import os
-# import dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Tự động nạp các biến môi trường từ file .env nếu tồn tại (Đảm bảo bảo mật khi đẩy lên GitHub)
+env_path = BASE_DIR / '.env'
+if env_path.exists():
+    with open(env_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):
+                if '=' in line:
+                    key, val = line.split('=', 1)
+                    os.environ[key.strip()] = val.strip().strip("'").strip('"')
+
 
 
 
@@ -191,4 +203,16 @@ EMAIL_HOST_USER = 'nguyentainang246@gmail.com'
 # 5. Chìa khóa bảo mật: Mật khẩu ứng dụng 16 ký tự (App Password)
 # Lưu ý: Tuyệt đối không dùng mật khẩu đăng nhập Gmail thường vì Google chặn lý do bảo mật.
 EMAIL_HOST_PASSWORD = 'oonuteejdtqagtfp'
+
+
+# ==========================================
+# KHU VỰC: CẤU HÌNH TELEGRAM BOT
+# ==========================================
+# Cấu hình Token và Chat ID mặc định cho Bot Telegram nhận cảnh báo.
+# Lấy từ biến môi trường (file .env) để bảo mật thông tin khi chia sẻ lên GitHub.
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', 'YOUR_TELEGRAM_BOT_TOKEN')
+TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', 'YOUR_TELEGRAM_CHAT_ID')
+
+
+
 

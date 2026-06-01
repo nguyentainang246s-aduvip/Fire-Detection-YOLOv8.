@@ -14,7 +14,15 @@ __pycache__/
 
 # Database (Cơ sở dữ liệu SQLite)
 db.sqlite3
+fire_detection/web_app/db.sqlite3
+
+# Ảnh tạm thời từ camera (PyQt5)
+fire_detection/pyqt_user_app/saved_frames/
+
+# Ảnh chụp hỏa hoạn đã tải lên (Django static images)
+fire_detection/web_app/static/images/
 
 # Hệ điều hành
 .DS_Store
 Thumbs.db
+
